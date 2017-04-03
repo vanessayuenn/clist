@@ -93,6 +93,13 @@ app.get('/og', (req, res) => {
  * routes that use mongodb
  */
 
+app.get('/', (req, res) => {
+  const ctx = req.webtaskContext;
+  MongoClient.connect(
+    ctx.secrets.MONGO_URI, (err, db) => sendItems(res, err, db)
+  );
+});
+
 app.post('/', (req, res) => {
   const ctx = req.webtaskContext;
   const newItem = ((item) => {
