@@ -47,48 +47,6 @@ const sendItems = (res, err, db, query={}) => {
 }
 
 
-/**
- * express app routes
- */
-
-app.post('/og', (req, res) => {
-  const ctx = req.webtaskContext;
-  const newItem = req.body.item;
-
-  if (newItem) {
-    ctx.storage.get((err, data) => {
-
-      if (err) {
-        sendResponse(res, RESPONSE.ERROR);
-      }
-      let list = data || [];
-      list.push(newItem);
-
-      ctx.storage.set(list, (err) => {
-        if (err) {
-          sendResponse(res, RESPONSE.ERROR);
-        } else {
-          sendResponse(res, RESPONSE.OK, list);
-        }
-      });
-
-    });
-  } else {
-    sendResponse(res, RESPONSE.ERROR);
-  }
-});
-
-app.get('/og', (req, res) => {
-  const ctx = req.webtaskContext;
-  ctx.storage.get((err, data) => {
-    if (err) {
-      sendResponse(res, RESPONSE.ERROR);
-    } else {
-      sendResponse(res, RESPONSE.OK, data);
-    }
-  });
-});
-
 /*
  * routes that use mongodb
  */
@@ -126,6 +84,7 @@ app.post('/', (req, res) => {
 
   });
 });
+
 
 /**
  * auth0 config (doesn't work atm)
