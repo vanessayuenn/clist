@@ -61,21 +61,36 @@ app.post('/', (req, res) => {
 
   const ctx = req.webtaskContext;
   const newItem = ((item) => {
-    if (!item || !item.content) {
+    if (!item || (!item._id && !item.content)) {
       sendResponse(res, RESPONSE.ERROR, null, 'nothing to add.');
     }
-    return {
-      content: item.content,
-      from: item.from
-    };
+    let _item = item;
+    // grab only the stuff we care about, everything else is garbage.
+    const {_id, content, from, done, ...garbage} = item;
+    Object.keys(_item = {_id, content, from, done: !!done})
+          .forEach(key => _item[key] === undefined && delete _item[key]);
+    return _item;
   })(req.body.item);
 
   MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
+
     if (err) sendResponse(res, RESPONSE.ERROR);
-    db.collection(COLLECTION).insertOne(
-      newItem,
-      (err, result) => sendItems(res, err, db)
-    );
+
+    if (newItem._id) {
+      const {_id, ...modifyItem} = newItem;
+      db.collection(COLLECTION).findAndModify(
+        {_id: Mongo.ObjectID(_id)},
+        [['_id', 1]],
+        {$set: modifyItem},
+        (err, result) => sendItems(res, err, db)
+      );
+    } else {
+      db.collection(COLLECTION).insertOne(
+        newItem,
+        (err, result) => sendItems(res, err, db)
+      );
+    }
+
   });
 });
 
