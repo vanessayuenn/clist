@@ -29,50 +29,6 @@ const sendResponse = (res, resObj, extraData, contentType = 'application/json') 
 
 
 /**
- * auth0 config (doesn't work atm)
- */
-
-const auth0Config = {
-  validateToken: (ctx, req, token, cb) => {
-    const authParams = {
-      clientSecret: ctx.secrets.AUTH0_CLIENT_SECRET,
-      audience: ctx.secrets.AUTH0_AUDIENCE,
-      domain: ctx.secrets.AUTH0_DOMAIN
-    }
-
-    console.log('authParams', authParams);
-    console.log('token', token);
-
-    if (!authParams) {
-      return cb({
-        code: 400,
-        message: 'Auth0 Client ID, Client Secret, and Auth0 Domain must be specified.'
-      });
-    }
-
-    // Validate Auth0 issued id_token
-    let user;
-    try {
-      user = jwt.verify(token, authParams.clientSecret,
-        {
-          algorithms: ['HS256'],
-          audience: authParams.clientSecret.audience,
-          issuer: `https://${ctx.secrets.AUTH0_DOMAIN}/`
-        }
-      );
-    } catch (e) {
-      return cb({
-        code: 401,
-        message: 'Unauthorized: ' + e.message
-      });
-    }
-    return cb(null, user);
-  },
-  loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED)
-}
-
-
-/**
  * express app routes
  */
 
@@ -115,5 +71,48 @@ app.get('/', (req, res) => {
   });
 });
 
+
+/**
+ * auth0 config (doesn't work atm)
+ */
+
+const auth0Config = {
+  validateToken: (ctx, req, token, cb) => {
+    const authParams = {
+      clientSecret: ctx.secrets.AUTH0_CLIENT_SECRET,
+      audience: ctx.secrets.AUTH0_AUDIENCE,
+      domain: ctx.secrets.AUTH0_DOMAIN
+    }
+
+    console.log('authParams', authParams);
+    console.log('token', token);
+
+    if (!authParams) {
+      return cb({
+        code: 400,
+        message: 'Auth0 Client ID, Client Secret, and Auth0 Domain must be specified.'
+      });
+    }
+
+    // Validate Auth0 issued id_token
+    let user;
+    try {
+      user = jwt.verify(token, authParams.clientSecret,
+        {
+          algorithms: ['HS256'],
+          audience: authParams.clientSecret.audience,
+          issuer: `https://${ctx.secrets.AUTH0_DOMAIN}/`
+        }
+      );
+    } catch (e) {
+      return cb({
+        code: 401,
+        message: 'Unauthorized: ' + e.message
+      });
+    }
+    return cb(null, user);
+  },
+  loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED)
+}
 
 module.exports = Webtask.fromExpress(app);
