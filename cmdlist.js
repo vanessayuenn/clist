@@ -3,7 +3,8 @@
 const Express = require('express');
 const Webtask = require('webtask-tools');
 const jwt = require('jsonwebtoken@7.1.9');
-const MongoClient = require('mongodb').MongoClient;
+const Mongo = require('mongodb');
+const MongoClient = Mongo.MongoClient;
 
 const app = new Express();
 app.use(require('body-parser').json());
@@ -26,16 +27,17 @@ const RESPONSE = {
 
 const sendResponse = (res, resObj, extraData, extraMsg,
                       contentType = 'application/json') => {
+
   resObj.data = extraData || [];
   resObj.message = resObj.message + (extraMsg ? `: ${extraMsg}` : '');
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
+
 }
 
 const sendItems = (res, err, db, query={}) => {
 
   if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
-
   db.collection(COLLECTION)
     .find(query, {sort: {'_id': 1}})
     .toArray((err, items) => {
@@ -43,15 +45,15 @@ const sendItems = (res, err, db, query={}) => {
       sendResponse(res, RESPONSE.OK, items);
       db.close();
   });
-
 }
 
 
 /*
- * routes that use mongodb
+ * express app routes
  */
 
 app.get('/', (req, res) => {
+
   const ctx = req.webtaskContext;
   MongoClient.connect(
     ctx.secrets.MONGO_URI, (err, db) => sendItems(res, err, db)
@@ -59,6 +61,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/', (req, res) => {
+
   const ctx = req.webtaskContext;
   const newItem = ((item) => {
     if (!item || !item.content) {
@@ -71,17 +74,29 @@ app.post('/', (req, res) => {
   })(req.body.item);
 
   MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
-
     if (err) sendResponse(res, RESPONSE.ERROR);
-    const col = db.collection(COLLECTION);
-
-    col.insertOne(newItem, (err, result) => {
-        if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
-        console.log('insertion result', result);
-        sendItems(res, err, db);
-      }
+    db.collection(COLLECTION).insertOne(
+      newItem,
+      (err, result) => sendItems(res, err, db)
     );
+  });
+});
 
+app.delete('/', (req, res) => {
+
+  const ctx = req.webtaskContext;
+  const itemToRemove = ((item) => {
+    if (!item || !item._id) {
+      sendResponse(res, RESPONSE.ERROR, null, 'nothing to delete.');
+    }
+    return {_id: item._id};
+  })(req.body.item);
+
+  MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
+    db.collection(COLLECTION).findAndRemove(
+      {_id: Mongo.ObjectID(itemToRemove._id)},
+      (err, result) => sendItems(res, err, db)
+    );
   });
 });
 
