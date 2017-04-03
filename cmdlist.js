@@ -3,6 +3,8 @@
 const Express = require('express');
 const Webtask = require('webtask-tools');
 const jwt = require('jsonwebtoken@7.1.9');
+const MongoClient = require('mongodb').MongoClient;
+
 const app = new Express();
 app.use(require('body-parser').json());
 
@@ -21,8 +23,10 @@ const RESPONSE = {
   }
 }
 
-const sendResponse = (res, resObj, extraData, contentType = 'application/json') => {
+const sendResponse = (res, resObj, extraData, extraMsg,
+                      contentType = 'application/json') => {
   resObj.data = extraData || [];
+  resObj.message = resObj.message + extraMsg ? `: ${extraMsg}` : '';
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
 }
@@ -32,8 +36,7 @@ const sendResponse = (res, resObj, extraData, contentType = 'application/json') 
  * express app routes
  */
 
-
-app.post('/', (req, res) => {
+app.post('/og', (req, res) => {
   const ctx = req.webtaskContext;
   const newItem = req.body.item;
 
@@ -60,7 +63,7 @@ app.post('/', (req, res) => {
   }
 });
 
-app.get('/', (req, res) => {
+app.get('/og', (req, res) => {
   const ctx = req.webtaskContext;
   ctx.storage.get((err, data) => {
     if (err) {
@@ -71,6 +74,26 @@ app.get('/', (req, res) => {
   });
 });
 
+/*
+ * routes that use mongodb
+ */
+
+app.post('/', (req, res) => {
+  const ctx = req.webtaskContext;
+  const newItem = req.body.item;
+
+  if (!newItem) sendResponse(res, RESPONSE.ERROR, null, 'nothing to add.');
+
+  MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
+    if (err) sendResponse(res, RESPONSE.ERROR);
+    const col = db.collection('items');
+    col.insertOne(newItem, (err, result) => {
+      if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
+      console.log('insertion result', result);
+      db.close();
+    });
+  });
+});
 
 /**
  * auth0 config (doesn't work atm)
