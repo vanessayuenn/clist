@@ -36,8 +36,7 @@ const auth0Config = {
   validateToken: (ctx, req, token, cb) => {
     const authParams = {
       clientSecret: ctx.secrets.AUTH0_CLIENT_SECRET,
-      secretEncoding: 'utf8',
-      audience: 'https://cmd-list',
+      audience: ctx.secrets.AUTH0_AUDIENCE,
       domain: ctx.secrets.AUTH0_DOMAIN
     }
 
@@ -57,7 +56,7 @@ const auth0Config = {
       user = jwt.verify(token, authParams.clientSecret,
         {
           algorithms: ['HS256'],
-          audience: ctx.secrets.AUTH0_AUDIENCE,
+          audience: authParams.clientSecret.audience,
           issuer: `https://${ctx.secrets.AUTH0_DOMAIN}/`
         }
       );
@@ -69,7 +68,7 @@ const auth0Config = {
     }
     return cb(null, user);
   },
-  loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED);
+  loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED)
 }
 
 
