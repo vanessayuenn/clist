@@ -11,30 +11,24 @@ app.use(require('body-parser').json());
 
 const COLLECTION = 'items';
 const RESPONSE = {
-  OK: {
-    status: 200,
-    message: 'ok'
-  },
-  ERROR: {
-    status: 400,
-    message: 'error'
-  },
-  UNAUTHORIZED: {
-    status: 401,
-    message: 'unauthorized'
-  }
+  OK: { status: 200, message: 'ok' },
+  ERROR: { status: 400, message: 'you fucked up' },
+  UNAUTHORIZED: { status: 401, message: 'unauthorized' }
 }
 
 const sendResponse = (res, resObj, data, extra, contentType = 'application/json') => {
+
   resObj.data = data || [];
   resObj.message = resObj.message + (extra ? `: ${extra}` : '');
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
+
 }
 
 const sendItems = (res, err, db, query={}) => {
 
   if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
+
   db.collection(COLLECTION)
     .find(query, {sort: {'_id': 1}})
     .toArray((err, items) => {
@@ -61,15 +55,18 @@ app.post('/', (req, res) => {
 
   const ctx = req.webtaskContext;
   const newItem = ((item) => {
+
     if (!item || (!item._id && !item.content)) {
       sendResponse(res, RESPONSE.ERROR, null, 'nothing to add.');
     }
+
     let _item = item;
     // grab only the stuff we care about, everything else is garbage.
     const {_id, content, from, done, ...garbage} = item;
     Object.keys(_item = {_id, content, from, done: !!done})
           .forEach(key => _item[key] === undefined && delete _item[key]);
     return _item;
+
   })(req.body.item);
 
   MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
@@ -77,6 +74,7 @@ app.post('/', (req, res) => {
     if (err) sendResponse(res, RESPONSE.ERROR);
 
     if (newItem._id) {
+
       const {_id, ...modifyItem} = newItem;
       db.collection(COLLECTION).findAndModify(
         {_id: Mongo.ObjectID(_id)},
@@ -84,13 +82,14 @@ app.post('/', (req, res) => {
         {$set: modifyItem},
         (err, result) => sendItems(res, err, db)
       );
+
     } else {
+
       db.collection(COLLECTION).insertOne(
         newItem,
         (err, result) => sendItems(res, err, db)
       );
     }
-
   });
 });
 
