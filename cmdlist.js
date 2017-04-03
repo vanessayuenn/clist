@@ -25,14 +25,11 @@ const RESPONSE = {
   }
 }
 
-const sendResponse = (res, resObj, extraData, extraMsg,
-                      contentType = 'application/json') => {
-
-  resObj.data = extraData || [];
-  resObj.message = resObj.message + (extraMsg ? `: ${extraMsg}` : '');
+const sendResponse = (res, resObj, data, extra, contentType = 'application/json') => {
+  resObj.data = data || [];
+  resObj.message = resObj.message + (extra ? `: ${extra}` : '');
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
-
 }
 
 const sendItems = (res, err, db, query={}) => {
