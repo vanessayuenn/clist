@@ -8,6 +8,7 @@ const MongoClient = require('mongodb').MongoClient;
 const app = new Express();
 app.use(require('body-parser').json());
 
+const COLLECTION = 'items';
 const RESPONSE = {
   OK: {
     status: 200,
@@ -26,9 +27,23 @@ const RESPONSE = {
 const sendResponse = (res, resObj, extraData, extraMsg,
                       contentType = 'application/json') => {
   resObj.data = extraData || [];
-  resObj.message = resObj.message + extraMsg ? `: ${extraMsg}` : '';
+  resObj.message = resObj.message + (extraMsg ? `: ${extraMsg}` : '');
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
+}
+
+const sendItems = (res, err, db, query={}) => {
+
+  if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
+
+  db.collection(COLLECTION)
+    .find(query, {sort: {'_id': 1}})
+    .toArray((err, items) => {
+      if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
+      sendResponse(res, RESPONSE.OK, items);
+      db.close();
+  });
+
 }
 
 
@@ -80,18 +95,28 @@ app.get('/og', (req, res) => {
 
 app.post('/', (req, res) => {
   const ctx = req.webtaskContext;
-  const newItem = req.body.item;
-
-  if (!newItem) sendResponse(res, RESPONSE.ERROR, null, 'nothing to add.');
+  const newItem = ((item) => {
+    if (!item || !item.content) {
+      sendResponse(res, RESPONSE.ERROR, null, 'nothing to add.');
+    }
+    return {
+      content: item.content,
+      from: item.from
+    };
+  })(req.body.item);
 
   MongoClient.connect(ctx.secrets.MONGO_URI, (err, db) => {
+
     if (err) sendResponse(res, RESPONSE.ERROR);
-    const col = db.collection('items');
+    const col = db.collection(COLLECTION);
+
     col.insertOne(newItem, (err, result) => {
-      if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
-      console.log('insertion result', result);
-      db.close();
-    });
+        if (err) sendResponse(res, RESPONSE.ERROR, null, err.message);
+        console.log('insertion result', result);
+        sendItems(res, err, db);
+      }
+    );
+
   });
 });
 
