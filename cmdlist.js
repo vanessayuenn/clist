@@ -16,6 +16,56 @@ const RESPONSE = {
   UNAUTHORIZED: { status: 401, message: 'unauthorized' }
 }
 
+
+/**
+ * auth0 config
+ */
+
+const auth0Config = {
+
+  validateToken: (ctx, req, token, cb) => {
+
+    const authParams = {
+      signingSecret: ctx.secrets.AUTH0_SIGNING_SECRET,
+      audience: ctx.secrets.AUTH0_AUDIENCE,
+      domain: ctx.secrets.AUTH0_DOMAIN
+    }
+
+    if (!authParams) {
+      return cb({
+        code: 400,
+        message: 'Auth0 Client ID, Client Secret, and Auth0 Domain must be specified.'
+      });
+    }
+
+    // Validate Auth0 issued id_token
+    let user;
+    try {
+      user = jwt.verify(token, authParams.signingSecret,
+        {
+          algorithms: ['HS256'],
+          audience: authParams.audience,
+          issuer: `https://${authParams.domain}/`
+        }
+      );
+    } catch (e) {
+      return cb({
+        code: 401,
+        message: 'Unauthorized: ' + e.message
+      });
+    }
+    return cb(null, user);
+
+  },
+  loginError: (error, ctx, req, res, baseUrl) =>
+    sendResponse(res, RESPONSE.UNAUTHORIZED)
+}
+
+
+/**
+ * helper functions
+ */
+
 const sendResponse = (res, resObj, data, extra, contentType = 'application/json') => {
 
   resObj.data = data || [];
@@ -49,6 +99,7 @@ app.get('/', (req, res) => {
   MongoClient.connect(
     ctx.secrets.MONGO_URI, (err, db) => sendItems(res, err, db)
   );
+
 });
 
 app.post('/', (req, res) => {
@@ -74,7 +125,6 @@ app.post('/', (req, res) => {
     if (err) sendResponse(res, RESPONSE.ERROR);
 
     if (newItem._id) {
-
       const {_id, ...modifyItem} = newItem;
       db.collection(COLLECTION).findAndModify(
         {_id: Mongo.ObjectID(_id)},
@@ -82,15 +132,15 @@ app.post('/', (req, res) => {
         {$set: modifyItem},
         (err, result) => sendItems(res, err, db)
       );
-
     } else {
-
       db.collection(COLLECTION).insertOne(
         newItem,
         (err, result) => sendItems(res, err, db)
       );
     }
+
   });
+
 });
 
 app.delete('/', (req, res) => {
@@ -109,50 +159,8 @@ app.delete('/', (req, res) => {
       (err, result) => sendItems(res, err, db)
     );
   });
+
 });
 
-
-/**
- * auth0 config (doesn't work atm)
- */
-
-const auth0Config = {
-  validateToken: (ctx, req, token, cb) => {
-    const authParams = {
-      signingSecret: ctx.secrets.AUTH0_SIGNING_SECRET,
-      audience: ctx.secrets.AUTH0_AUDIENCE,
-      domain: ctx.secrets.AUTH0_DOMAIN
-    }
-
-    console.log('authParams', authParams);
-    console.log('token', token);
-
-    if (!authParams) {
-      return cb({
-        code: 400,
-        message: 'Auth0 Client ID, Client Secret, and Auth0 Domain must be specified.'
-      });
-    }
-
-    // Validate Auth0 issued id_token
-    let user;
-    try {
-      user = jwt.verify(token, authParams.signingSecret,
-        {
-          algorithms: ['HS256'],
-          audience: authParams.audience,
-          issuer: `https://${authParams.domain}/`
-        }
-      );
-    } catch (e) {
-      return cb({
-        code: 401,
-        message: 'Unauthorized: ' + e.message
-      });
-    }
-    return cb(null, user);
-  },
-  loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED)
-}
 
 module.exports = Webtask.fromExpress(app).auth0(auth0Config);
