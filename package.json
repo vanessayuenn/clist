@@ -1,0 +1,22 @@
+{
+  "name": "clist",
+  "version": "1.0.0",
+  "description": "cli tool for lists",
+  "preferGlobal": true,
+  "bin": {
+    "clist": "cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vanessayuenn/clist.git"
+  },
+  "author": "vanessa yuen",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/vanessayuenn/clist/issues"
+  },
+  "homepage": "https://github.com/vanessayuenn/clist#readme",
+  "dependencies": {
+    "cliff": "^0.1.10"
+  }
+}

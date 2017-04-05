@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken@7.1.9');
 const Mongo = require('mongodb');
 const MongoClient = Mongo.MongoClient;
 
+
 const app = new Express();
 app.use(require('body-parser').json());
 
@@ -162,5 +163,9 @@ app.delete('/', (req, res) => {
 
 });
 
+
+/**
+ * ENTRY POINT
+ */
 
 module.exports = Webtask.fromExpress(app).auth0(auth0Config);
