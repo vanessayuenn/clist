@@ -119,7 +119,7 @@ app.delete('/', (req, res) => {
 const auth0Config = {
   validateToken: (ctx, req, token, cb) => {
     const authParams = {
-      clientSecret: ctx.secrets.AUTH0_CLIENT_SECRET,
+      signingSecret: ctx.secrets.AUTH0_SIGNING_SECRET,
       audience: ctx.secrets.AUTH0_AUDIENCE,
       domain: ctx.secrets.AUTH0_DOMAIN
     }
@@ -137,11 +137,11 @@ const auth0Config = {
     // Validate Auth0 issued id_token
     let user;
     try {
-      user = jwt.verify(token, authParams.clientSecret,
+      user = jwt.verify(token, authParams.signingSecret,
         {
           algorithms: ['HS256'],
-          audience: authParams.clientSecret.audience,
-          issuer: `https://${ctx.secrets.AUTH0_DOMAIN}/`
+          audience: authParams.audience,
+          issuer: `https://${authParams.domain}/`
         }
       );
     } catch (e) {
@@ -155,4 +155,4 @@ const auth0Config = {
   loginError: (error, ctx, req, res, baseUrl) => sendResponse(res, RESPONSE.UNAUTHORIZED)
 }
 
-module.exports = Webtask.fromExpress(app);
+module.exports = Webtask.fromExpress(app).auth0(auth0Config);
