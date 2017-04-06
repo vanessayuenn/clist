@@ -73,6 +73,7 @@ const sendResponse = (res, resObj, data, extra, contentType = 'application/json'
   resObj.message = resObj.message + (extra ? `: ${extra}` : '');
   res.writeHead(resObj.status, {'Content-Type': contentType});
   res.end(JSON.stringify(resObj));
+  exit();
 
 }
 
