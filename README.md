@@ -1,4 +1,4 @@
-# cmd-list 📝
+# clist = cli + list 📝
 
 A very basic command line list tool built with node, webtask, and free-range electrons. 💯% organic.
 
