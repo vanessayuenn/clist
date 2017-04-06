@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/vanessayuenn/clist#readme",
   "dependencies": {
-    "cliff": "^0.1.10"
+    "chalk": "^1.1.3"
   }
 }
