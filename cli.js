@@ -7,21 +7,71 @@ const QS = require('querystring');
 const Config = require('./config');
 
 
-const reqOpt = {
-  host: Config.WEBTASK_HOST,
-  path: Config.WEBTASK_PATH,
-  headers: {
+/**
+ * request helpers
+ */
+
+const buildReqOpt = (method, body) => {
+
+  const opt = {
+    host: Config.WEBTASK_HOST,
+    path: Config.WEBTASK_PATH,
+    method: method
+  };
+
+  const headers = {
     'Authorization': `Bearer ${ Config.ACCESS_TOKEN }`,
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'Accept': 'application/json'
+  };
+
+  if (body) {
+    Object.assign(
+      headers,
+      { 'Content-Length': Buffer.byteLength(JSON.stringify(body)) }
+    );
   }
-};
+
+  return Object.assign({}, opt, { headers });
+}
+
+const sendReq = (method, item) => {
+
+  let body;
+  if (item) {
+    item.from = Config.FROM;
+    body = { item: item }
+  }
+
+  const req = Https.request(buildReqOpt(method, body), (res) => {
+
+      res.setEncoding('utf8');
+      res.on('data', (chunk) => {
+        const parsed = JSON.parse(chunk);
+        if (parsed.status !== 200) {
+          printError(parsed.message);
+        } else {
+          printData(parsed.data);
+        }
+      });
+
+  });
+
+  if (body) {
+    req.write(JSON.stringify(body));
+  }
+
+  return req;
+}
+
+
+/**
+ * print the returned data
+ */
 
 const printData = (content) => {
 
-  if (!content) {
-    return;
-  }
+  if (!content.length) return;
 
   console.log(`\n\t🥑  ${ Chalk.bold.underline.green('your fabulous list') } 🥑\n`);
 
@@ -41,34 +91,23 @@ const printData = (content) => {
   console.log(`\n\t🌊  ${ Chalk.blue('kthxbai.\n') }`);
 }
 
-const userArgs = process.argv.slice(2);
-const cmd = userArgs[0];
-
-const sendReq = (method, body) => {
-  const req = Https.request(
-    Object.assign({}, reqOpt, { method: method }),
-    (res) => {
-      res.setEncoding('utf8');
-
-      res.on('data', (chunk) => {
-        const parsed = JSON.parse(chunk);
-        // console.log(parsed);
-        if (parsed.status !== 200) {
-          console.log(`\n\t🚨  ${ Chalk.red.bold('Error') }`);
-          console.log(Chalk.red(`\t${ parsed.message }\n`));
-        } else {
-          printData(parsed.data);
-        }
-      });
-    }
-  );
-  if (body) {
-    body.from = Config.FROM;
-    req.write(JSON.stringify({ item: body }));
-  }
-  return req;
+const printError = (msg) => {
+  console.log(`\n\t🚨  ${ Chalk.red.bold('Error') }`);
+  console.log(Chalk.red(`\t${ msg }\n`));
+  process.exit(1);
 }
 
+
+/**
+ * entry point
+ */
+
+if (!Config.ACCESS_TOKEN || !Config.FROM) {
+  printError('Either `ACCESS_TOKEN` or `FROM` is missing from config.js.');
+}
+
+const userArgs = process.argv.slice(2);
+const cmd = userArgs[0];
 let req;
 
 switch (cmd) {
@@ -79,16 +118,13 @@ switch (cmd) {
     req = sendReq('POST', { content: userArgs[1] });
     break;
   case 'fin':
-    req = sendReq(
-      'POST',
-      { _id: userArgs[1], done: true }
-    );
+    req = sendReq('POST', { _id: userArgs[1], done: true });
     break;
   case 'edit':
-    req = sendReq(
-      'POST',
-      { _id: userArgs[1], content: userArgs[2] }
-    );
+    req = sendReq('POST', { _id: userArgs[1], content: userArgs[2] });
+    break;
+  case 'rm':
+    req = sendReq('DELETE', { _id: userArgs[1] });
     break;
   default:
     console.log('help');
@@ -99,11 +135,3 @@ if (req) {
   req.on('error', (e) => console.error(e));
   req.end();
 }
-
-// clist <command> [<args>]
-// clist ls
-// clist add 'content'
-// clist fin 'id'
-// clist edit 'id' 'content'
-// clist rm 'id'
-// clist help
