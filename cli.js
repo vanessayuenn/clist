@@ -91,6 +91,10 @@ const printData = (content) => {
   console.log(`\n\t🌊  ${ Chalk.blue('kthxbai.\n') }`);
 }
 
+/**
+ * error handling
+ */
+
 const printError = (msg) => {
   console.log(`\n\t🚨  ${ Chalk.red.bold('Error') }`);
   console.log(Chalk.red(`\t${ msg }\n`));
@@ -127,7 +131,14 @@ switch (cmd) {
     req = sendReq('DELETE', { _id: userArgs[1] });
     break;
   default:
-    console.log('help');
+    console.log(`usage: clist <commad> [<args>]
+
+      list items     clist ls
+      add item       clist add <content>
+      mark as done   clist fin <content>
+      edit item      clist edit <id> <content>
+      remove item    clist rm <id>
+    `);
     break;
 }
 
